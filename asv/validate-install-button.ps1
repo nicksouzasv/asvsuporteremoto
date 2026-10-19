@@ -23,6 +23,7 @@ public static class InstallerAccessibility {
     }
     static IAccessible FindNode(IAccessible node, string name, bool button) {
         if (node == null) return null;
+        try {
         if (Regex.IsMatch(node.get_accName(0) ?? "", name, RegexOptions.IgnoreCase) &&
             (!button || (Convert.ToInt32(node.get_accRole(0)) == 43 &&
                          (Convert.ToInt32(node.get_accState(0)) & 1) == 0))) return node;
@@ -31,6 +32,7 @@ public static class InstallerAccessibility {
             if (found != null) return found;
         }
         return null;
+        } catch (COMException) { return null; } // Nodes can disappear while a dialog opens.
     }
 }
 '@
