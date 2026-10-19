@@ -11,13 +11,14 @@ public static class InstallerAccessibility {
     [DllImport("oleacc.dll")]
     static extern int AccessibleObjectFromWindow(IntPtr hwnd, uint id, ref Guid iid,
         [MarshalAs(UnmanagedType.Interface)] out object accessible);
-    public static void Enable(IntPtr parent) {
+    public static int Enable(IntPtr parent) {
         var child = FindWindowEx(parent, IntPtr.Zero, "FLUTTERVIEW", null);
-        if (child == IntPtr.Zero) return;
+        if (child == IntPtr.Zero) return -1;
         var iid = new Guid("618736e0-3c3d-11cf-810c-00aa00389b71");
         object accessible;
-        AccessibleObjectFromWindow(child, 0xfffffffc, ref iid, out accessible);
+        int result = AccessibleObjectFromWindow(child, 0xfffffffc, ref iid, out accessible);
         if (accessible != null && Marshal.IsComObject(accessible)) Marshal.ReleaseComObject(accessible);
+        return result;
     }
 }
 '@
@@ -40,7 +41,7 @@ function Get-InstallWindow {
     $p = Get-Process -Name ASV-Suporte-Remoto -ErrorAction SilentlyContinue |
         Where-Object MainWindowHandle -ne 0 | Select-Object -First 1
     if ($p) {
-        [InstallerAccessibility]::Enable($p.MainWindowHandle)
+        $null = [InstallerAccessibility]::Enable($p.MainWindowHandle)
         return [Windows.Automation.AutomationElement]::FromHandle($p.MainWindowHandle)
     }
 }
@@ -113,6 +114,7 @@ try {
         Select-Object ProcessName, MainWindowHandle, MainWindowTitle | Format-Table | Out-Host
     $window = Get-InstallWindow
     if ($window) {
+        Write-Host "MSAA activation result: $([InstallerAccessibility]::Enable([IntPtr]$window.Current.NativeWindowHandle))"
         Save-InstallWindow 'interactive-install-failure.png'
         foreach ($element in $window.FindAll([Windows.Automation.TreeScope]::Descendants,
                 [Windows.Automation.Condition]::TrueCondition)) {
