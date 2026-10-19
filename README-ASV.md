@@ -23,6 +23,12 @@ Um artefato de uma execução com falha pode conter um instalador não homologad
 
 Para implantação por ferramenta administrativa, execute `ASV-Suporte-Remoto-Setup.exe --silent-install` com privilégios elevados. O instalador interativo também permanece disponível. Não há senha permanente pré-configurada: acesso sem configuração de rede não significa autorização irrestrita de acesso remoto. As formas de consentimento/autenticação originais permanecem.
 
+## Revalidar um instalador existente
+
+O workflow **ASV Validate Existing Installer** recebe o ID de uma execução de compilação e testa o mesmo EXE em outro Windows limpo, sem alterar o binário. O pacote validado inclui a procedência do código, a revisão do script de teste e os hashes. Isso permite corrigir ou ampliar a validação sem recompilar ou modificar executáveis prontos.
+
+O primeiro instalador foi compilado no commit `e4b6d7ba654bbac4bc64bfe893d1976fcbe6aafe`. A primeira execução interrompeu os testes ao tentar ler saída de um comando de alteração de opção, que não retorna texto. A correção foi apenas no teste. A execução de validação [39314173633](https://github.com/nicksouzasv/asvsuporteremoto/actions/runs/39314173633) concluiu com sucesso sobre o EXE original. Seu fonte correspondente permanece o do commit compilado, indicado no arquivo de procedência e na tela Sobre.
+
 ## Identificadores e configurações
 
 Nome visível na interface e metadados: **ASV Suporte Remoto**. Serviço, pasta, executável instalado e atalhos usam `ASV-Suporte-Remoto`. A validação de nomes do instalador oficial exige `[a-zA-Z0-9-]+`; preservá-la evita alterar dezenas de comandos de serviço e Registro para suportar espaços.
