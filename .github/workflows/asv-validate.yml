@@ -57,6 +57,7 @@ jobs:
         shell: pwsh
         run: |
           Copy-Item asv/validate-windows.ps1 distribution/validate-windows.ps1
+          Copy-Item asv/validate-install-button.ps1 distribution/validate-install-button.ps1
           Get-ChildItem distribution -File | Where-Object Name -ne SHA256SUMS.txt | ForEach-Object { "$( (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower() )  $($_.Name)" } | Set-Content distribution/SHA256SUMS.txt
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         if: always()
