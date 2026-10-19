@@ -34,7 +34,9 @@ function Invoke-ASV([string[]]$Arguments) {
             -RedirectStandardOutput $outFile -RedirectStandardError $errFile
         if (-not $p.WaitForExit(30000)) { $p.Kill(); throw 'CLI timeout' }
         if ($p.ExitCode -ne 0) { throw "CLI exit code $($p.ExitCode)" }
-        return (Get-Content $outFile -Raw).Trim()
+        $output = Get-Content $outFile -Raw
+        if ($null -eq $output) { return '' }
+        return $output.Trim()
     } finally {
         Remove-Item $outFile, $errFile -Force -ErrorAction SilentlyContinue
     }

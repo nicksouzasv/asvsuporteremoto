@@ -1,0 +1,52 @@
+name: ASV Validate Existing Installer
+on:
+  workflow_dispatch:
+    inputs:
+      build_run_id:
+        description: 'Run ID of the ASV build containing the installer and corresponding source'
+        required: true
+        default: '39306201149'
+        type: string
+permissions:
+  contents: read
+  actions: read
+jobs:
+  validate:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          submodules: false
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: ASV-Suporte-Remoto-Windows-x64
+          path: distribution
+          run-id: ${{ inputs.build_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Record installer source provenance
+        shell: python
+        run: |
+          import json, os, tarfile
+          from pathlib import Path
+          with tarfile.open('distribution/ASV-Suporte-Remoto-source.tar.gz') as archive:
+              manifest = json.load(archive.extractfile('./asv/build-manifest.json'))
+          result = {
+              'build_manifest': manifest,
+              'validation_commit': os.environ['GITHUB_SHA'],
+              'note': 'Installer and embedded source are unchanged; validation script runs from this commit.'
+          }
+          Path('distribution/build-provenance.json').write_text(json.dumps(result, indent=2))
+      - name: Validate unchanged installer on clean Windows
+        run: ./asv/validate-windows.ps1 -Installer ./distribution/ASV-Suporte-Remoto-Setup.exe
+      - name: Hash verified deliverables
+        if: success()
+        shell: pwsh
+        run: |
+          Copy-Item asv/validate-windows.ps1 distribution/validate-windows.ps1
+          Get-ChildItem distribution -File | Where-Object Name -ne SHA256SUMS.txt | ForEach-Object { "$( (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower() )  $($_.Name)" } | Set-Content distribution/SHA256SUMS.txt
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: always()
+        with:
+          name: ASV-Suporte-Remoto-Windows-x64-validated
+          path: distribution/
+          if-no-files-found: error
