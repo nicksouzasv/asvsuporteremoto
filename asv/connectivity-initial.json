@@ -1,0 +1,13 @@
+{
+  "checked_at": "2026-10-19T18:37:02.010962+00:00",
+  "host": "rustdesk.asv.com.br",
+  "tcp": {
+    "21115": "reachable",
+    "21116": "reachable",
+    "21117": "reachable"
+  },
+  "scope": "DNS and TCP only; not RustDesk handshake or relay session",
+  "addresses": [
+    "76.13.239.41"
+  ]
+}
