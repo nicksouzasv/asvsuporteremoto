@@ -226,7 +226,7 @@ class _InstallPageBodyState extends State<_InstallPageBody>
                     () => ElevatedButton.icon(
                       icon: Icon(Icons.done_rounded, size: 16),
                       label: Text(translate('Accept and Install')),
-                      onPressed: btnEnabled.value ? install : null,
+                      onPressed: btnEnabled.value ? () => install(context) : null,
                       style: buttonStyle,
                     ),
                   ),
@@ -250,7 +250,7 @@ class _InstallPageBodyState extends State<_InstallPageBody>
         ));
   }
 
-  Future<void> install() async {
+  Future<void> install(BuildContext context) async {
     if (!btnEnabled.value) return;
     btnEnabled.value = false;
     showProgress.value = true;
