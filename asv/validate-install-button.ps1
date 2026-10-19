@@ -23,16 +23,21 @@ public static class InstallerAccessibility {
     }
     static IAccessible FindNode(IAccessible node, string name, bool button) {
         if (node == null) return null;
+        string text = "";
+        try { text = node.get_accName(0) ?? ""; } catch (COMException) { }
+        try { text += " " + node.get_accValue(0); } catch (COMException) { }
         try {
-        if (Regex.IsMatch(node.get_accName(0) ?? "", name, RegexOptions.IgnoreCase) &&
-            (!button || (Convert.ToInt32(node.get_accRole(0)) == 43 &&
-                         (Convert.ToInt32(node.get_accState(0)) & 1) == 0))) return node;
-        for (int i = 1; i <= node.accChildCount; i++) {
-            var found = FindNode(node.get_accChild(i) as IAccessible, name, button);
-            if (found != null) return found;
-        }
+            if (Regex.IsMatch(text.Trim(), name, RegexOptions.IgnoreCase) &&
+                (!button || (Convert.ToInt32(node.get_accRole(0)) == 43 &&
+                             (Convert.ToInt32(node.get_accState(0)) & 1) == 0))) return node;
+            for (int i = 1; i <= node.accChildCount; i++) {
+                try {
+                    var found = FindNode(node.get_accChild(i) as IAccessible, name, button);
+                    if (found != null) return found;
+                } catch (COMException) { } // A child can disappear while a dialog opens.
+            }
+        } catch (COMException) { }
         return null;
-        } catch (COMException) { return null; } // Nodes can disappear while a dialog opens.
     }
 }
 '@
