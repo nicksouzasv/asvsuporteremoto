@@ -1,0 +1,233 @@
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -4,7 +4,7 @@
+ authors = ["rustdesk <info@rustdesk.com>"]
+ edition = "2021"
+ build= "build.rs"
+-description = "RustDesk Remote Desktop"
++description = "ASV Suporte Remoto"
+ default-run = "rustdesk"
+ rust-version = "1.75"
+ 
+@@ -255,8 +255,8 @@
+ 
+ [package.metadata.winres]
+ LegalCopyright = "Copyright © 2026 Purslane Tech Pte. Ltd. All rights reserved."
+-ProductName = "RustDesk"
+-FileDescription = "RustDesk Remote Desktop"
++ProductName = "ASV Suporte Remoto"
++FileDescription = "ASV Suporte Remoto"
+ OriginalFilename = "rustdesk.exe"
+ 
+ [target.'cfg(target_os="windows")'.build-dependencies]
+--- a/src/flutter_ffi.rs
++++ b/src/flutter_ffi.rs
+@@ -49,7 +49,7 @@
+     if custom_client_config.is_empty() {
+         crate::load_custom_client();
+     } else {
+-        crate::read_custom_client(custom_client_config);
++        crate::load_custom_client();
+     }
+     #[cfg(target_os = "android")]
+     {
+--- a/src/flutter.rs
++++ b/src/flutter.rs
+@@ -206,7 +206,7 @@
+ #[cfg(windows)]
+ #[no_mangle]
+ pub unsafe extern "C" fn get_rustdesk_app_name(buffer: *mut u16, length: i32) -> i32 {
+-    let name = crate::platform::wide_string(&crate::get_app_name());
++    let name = crate::platform::wide_string("ASV Suporte Remoto");
+     if length > name.len() as i32 {
+         std::ptr::copy_nonoverlapping(name.as_ptr(), buffer, name.len());
+         return 0;
+--- a/src/tray.rs
++++ b/src/tray.rs
+@@ -84,13 +84,13 @@
+         if count == 0 {
+             format!(
+                 "{} {}",
+-                crate::get_app_name(),
++                "ASV Suporte Remoto",
+                 translate("Service is running".to_owned()),
+             )
+         } else {
+             format!(
+                 "{} - {}\n{}",
+-                crate::get_app_name(),
++                "ASV Suporte Remoto",
+                 translate("Ready".to_owned()),
+                 translate("{".to_string() + &format!("{count}") + "} sessions"),
+             )
+--- a/src/common.rs
++++ b/src/common.rs
+@@ -2358,25 +2358,20 @@
+ }
+ 
+ pub fn load_custom_client() {
+-    #[cfg(debug_assertions)]
+-    if let Ok(data) = std::fs::read_to_string("./custom.txt") {
+-        read_custom_client(data.trim());
+-        return;
+-    }
+-    let Some(path) = std::env::current_exe().map_or(None, |x| x.parent().map(|x| x.to_path_buf()))
+-    else {
+-        return;
+-    };
+-    #[cfg(target_os = "macos")]
+-    let path = path.join("../Resources");
+-    let path = path.join("custom.txt");
+-    if path.is_file() {
+-        let Ok(data) = std::fs::read_to_string(&path) else {
+-            log::error!("Failed to read custom client config");
+-            return;
+-        };
+-        read_custom_client(&data.trim());
+-    }
++    // ASV settings are compiled in and apply to the UI and the Windows service.
++    *config::APP_NAME.write().unwrap() = "ASV-Suporte-Remoto".to_owned();
++    *config::PROD_RENDEZVOUS_SERVER.write().unwrap() = "rustdesk.asv.com.br".to_owned();
++    let mut settings = config::OVERWRITE_SETTINGS.write().unwrap();
++    settings.insert("custom-rendezvous-server".to_owned(), "rustdesk.asv.com.br".to_owned());
++    settings.insert("key".to_owned(), "vZmmsfIrplKLZdZB4FoaD8o39dSPJaV58RY4SW0ipxc=".to_owned());
++    settings.insert("relay-server".to_owned(), String::new());
++    settings.insert("api-server".to_owned(), String::new());
++    settings.insert("allow-deep-link-server-settings".to_owned(), "N".to_owned());
++    settings.insert("allow-auto-update".to_owned(), "N".to_owned());
++    drop(settings);
++    config::OVERWRITE_LOCAL_SETTINGS.write().unwrap().insert("enable-check-update".to_owned(), "N".to_owned());
++    config::EXE_RENDEZVOUS_SERVER.write().unwrap().clear();
++    config::BUILTIN_SETTINGS.write().unwrap().insert("hide-network-settings".to_owned(), "Y".to_owned());
+ }
+ 
+ fn read_custom_client_advanced_settings(
+--- a/src/platform/windows.rs
++++ b/src/platform/windows.rs
+@@ -2101,12 +2101,12 @@
+ }
+ 
+ pub fn get_license_from_exe_name() -> ResultType<CustomServer> {
+-    let mut exe = std::env::current_exe()?.to_str().unwrap_or("").to_owned();
+-    // if defined portable appname entry, replace original executable name with it.
+-    if let Ok(portable_exe) = std::env::var(PORTABLE_APPNAME_RUNTIME_ENV_KEY) {
+-        exe = portable_exe;
+-    }
+-    get_custom_server_from_string(&exe)
++    Ok(CustomServer {
++        host: "rustdesk.asv.com.br".to_owned(),
++        key: "vZmmsfIrplKLZdZB4FoaD8o39dSPJaV58RY4SW0ipxc=".to_owned(),
++        api: String::new(),
++        relay: String::new(),
++    })
+ }
+ 
+ // We can't directly use `RegKey::set_value` to update the registry value, because it will fail with `ERROR_ACCESS_DENIED`
+--- a/flutter/lib/main.dart
++++ b/flutter/lib/main.dart
+@@ -497,7 +497,7 @@
+           debugShowCheckedModeBanner: false,
+           title: isWeb
+               ? '${bind.mainGetAppNameSync()} Web Client V2 (Preview)'
+-              : bind.mainGetAppNameSync(),
++              : "ASV Suporte Remoto",
+           theme: MyTheme.lightTheme,
+           darkTheme: MyTheme.darkTheme,
+           themeMode: MyTheme.currentThemeMode(),
+--- a/flutter/lib/common.dart
++++ b/flutter/lib/common.dart
+@@ -3021,7 +3021,7 @@
+ }
+ 
+ String getWindowName({WindowType? overrideType}) {
+-  final name = bind.mainGetAppNameSync();
++  const name = "ASV Suporte Remoto";
+   switch (overrideType ?? kWindowType) {
+     case WindowType.Main:
+       return name;
+--- a/flutter/windows/runner/Runner.rc
++++ b/flutter/windows/runner/Runner.rc
+@@ -90,12 +90,12 @@
+         BLOCK "040904e4"
+         BEGIN
+             VALUE "CompanyName", "Purslane Tech Pte. Ltd." "\0"
+-            VALUE "FileDescription", "RustDesk Remote Desktop" "\0"
++            VALUE "FileDescription", "ASV Suporte Remoto" "\0"
+             VALUE "FileVersion", VERSION_AS_STRING "\0"
+             VALUE "InternalName", "rustdesk" "\0"
+             VALUE "LegalCopyright", "Copyright © 2026 Purslane Tech Pte. Ltd. All rights reserved." "\0"
+             VALUE "OriginalFilename", "rustdesk.exe" "\0"
+-            VALUE "ProductName", "RustDesk" "\0"
++            VALUE "ProductName", "ASV Suporte Remoto" "\0"
+             VALUE "ProductVersion", VERSION_AS_STRING "\0"
+         END
+     END
+--- a/flutter/lib/desktop/pages/desktop_setting_page.dart
++++ b/flutter/lib/desktop/pages/desktop_setting_page.dart
+@@ -2532,7 +2532,7 @@
+       final scrollController = ScrollController();
+       return SingleChildScrollView(
+         controller: scrollController,
+-        child: _Card(title: translate('About RustDesk'), children: [
++        child: _Card(title: 'ASV Suporte Remoto — Sobre', children: [
+           Column(
+             crossAxisAlignment: CrossAxisAlignment.start,
+             children: [
+@@ -2552,6 +2552,12 @@
+               SelectionArea(
+                   child: Text('${translate('ID')}: $myId')
+                       .marginSymmetric(vertical: 4.0)),
++              InkWell(
++                  onTap: () {
++                    launchUrlString('ASV_SOURCE_URL');
++                  },
++                  child: const Text('Código-fonte correspondente (AGPL-3.0)',
++                      style: linkStyle).marginSymmetric(vertical: 4.0)),
+               InkWell(
+                   onTap: () {
+                     launchUrlString('https://rustdesk.com/privacy.html');
+--- a/flutter/lib/desktop/widgets/tabbar_widget.dart
++++ b/flutter/lib/desktop/widgets/tabbar_widget.dart
+@@ -641,7 +641,7 @@
+                         Offstage(
+                             offstage: !showTitle,
+                             child: const Text(
+-                              "RustDesk",
++                              "ASV Suporte Remoto",
+                               style: TextStyle(fontSize: 13),
+                             ).marginOnly(left: 2))
+                       ]).marginOnly(
+--- a/libs/portable/Cargo.toml
++++ b/libs/portable/Cargo.toml
+@@ -2,7 +2,7 @@
+ name = "rustdesk-portable-packer"
+ version = "1.5.0"
+ edition = "2021"
+-description = "RustDesk Remote Desktop"
++description = "ASV Suporte Remoto"
+ 
+ # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+ 
+@@ -27,9 +27,9 @@
+ 
+ [package.metadata.winres]
+ LegalCopyright = "Copyright © 2026 Purslane Tech Pte. Ltd. All rights reserved."
+-ProductName = "RustDesk"
++ProductName = "ASV Suporte Remoto"
+ OriginalFilename = "rustdesk.exe"
+-FileDescription = "RustDesk Remote Desktop"
++FileDescription = "ASV Suporte Remoto"
+ #ProductVersion = ""
+ 
+ [target.'cfg(target_os="windows")'.build-dependencies]
+--- a/libs/portable/src/main.rs
++++ b/libs/portable/src/main.rs
+@@ -281,7 +281,7 @@
+         }
+         i += 1;
+     }
+-    let click_setup = args.is_empty() && arg_exe.to_lowercase().ends_with("install.exe");
++    let click_setup = args.is_empty() && (arg_exe.to_lowercase().ends_with("install.exe") || arg_exe.to_lowercase().ends_with("setup.exe"));
+     #[cfg(windows)]
+     let quick_support = args.is_empty() && win::is_quick_support_exe(&arg_exe);
+     #[cfg(not(windows))]

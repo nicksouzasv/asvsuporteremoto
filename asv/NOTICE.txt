@@ -1,0 +1,21 @@
+ASV Suporte Remoto
+Cliente derivado do RustDesk oficial 1.5.0.
+Upstream: https://github.com/rustdesk/rustdesk
+Commit: fada664df7a294d1d1a9ca3e7cd3637069122f17
+Copyright dos autores originais preservado nos arquivos de origem.
+Copyright das modificações ASV: 2026, contribuidores desta distribuição.
+Licença: GNU Affero General Public License, versão 3, conforme LICENCE.
+Este programa é fornecido sem garantia, nos termos da licença.
+
+Modificações: identidade ASV; servidor/chave incorporados; isolamento de
+serviço e configuração; bloqueio de substituição por nome de arquivo;
+atualizações distribuídas pela ASV; automação Windows e documentação.
+
+O código-fonte correspondente completo, incluindo o submódulo hbb_common
+e os scripts de compilação, acompanha esta distribuição em
+ASV-Suporte-Remoto-source.tar.gz, também instalado junto ao executável.
+A tela Sobre oferece acesso ao commit do código-fonte desta compilação.
+Ao distribuir, mantenha juntos o instalador, fonte correspondente e licença.
+Se o repositório for privado, disponibilize o fonte aos destinatários por
+um endereço HTTPS acessível e configure ASV_SOURCE_URL antes da compilação.
+Os recursos visuais oficiais devem permitir sua redistribuição com o fonte.
