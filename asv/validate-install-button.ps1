@@ -82,6 +82,15 @@ try {
     $report.result = 'failed'
     $report.error = $_.Exception.Message
     Write-Host $_.ScriptStackTrace
+    Get-Process | Where-Object { $_.ProcessName -match 'ASV|rustdesk' } |
+        Select-Object ProcessName, MainWindowHandle, MainWindowTitle | Format-Table | Out-Host
+    $window = Get-InstallWindow
+    if ($window) {
+        foreach ($element in $window.FindAll([Windows.Automation.TreeScope]::Descendants,
+                [Windows.Automation.Condition]::TrueCondition)) {
+            Write-Host "$($element.Current.ControlType.ProgrammaticName): $($element.Current.Name)"
+        }
+    }
     throw
 } finally {
     New-Item distribution -ItemType Directory -Force | Out-Null
