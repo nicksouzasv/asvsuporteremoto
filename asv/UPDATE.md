@@ -40,3 +40,7 @@ Os SVGs em `res/logo*.svg` são do caminho legado; substituí-los isoladamente n
 ## Superfície de regressão
 
 Mudam identidade e configuração iniciais de todos os processos deste fork, resolução de servidor/chave e verificação do serviço anterior no Windows, seleção de marca/títulos na interface, metadados e reconhecimento do instalador no empacotador. Esses caminhos precisam mudar para atender à identidade ASV sem configuração manual e sem comandos Windows inseguros com espaços. O serviço continua usando a implementação original, porém com outro nome e perfil de configuração. Captura, entrada, transporte, autenticação, transferência e protocolos não foram reimplementados. O código legado Sciter não é alvo de entrega.
+
+### Correção da instalação interativa
+
+Superfície alterada: `src/flutter_ffi.rs::install_install_me` passa a devolver falhas da instalação Windows ao Future do Flutter, sem usar o caminho que registrava o erro e encerrava o processo com código zero. `flutter/lib/desktop/pages/install_page.dart::install` aguarda esse resultado, exibe a causa e restaura os controles para tentar novamente. A assinatura Dart continua `Future<void>`; a ponte precisa ser regenerada. A instalação nativa, o protocolo e a instalação silenciosa permanecem no caminho anterior. A regressão é verificada clicando no botão com o serviço oficial ativo e repetindo após parar o serviço de teste.

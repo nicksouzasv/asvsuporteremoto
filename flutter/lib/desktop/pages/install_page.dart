@@ -250,18 +250,39 @@ class _InstallPageBodyState extends State<_InstallPageBody>
         ));
   }
 
-  void install() {
-    do_install() {
-      btnEnabled.value = false;
-      showProgress.value = true;
-      String args = '';
-      if (startmenu.value) args += ' startmenu';
-      if (desktopicon.value) args += ' desktopicon';
-      if (printer.value) args += ' printer';
-      bind.installInstallMe(options: args, path: controller.text);
+  Future<void> install() async {
+    if (!btnEnabled.value) return;
+    btnEnabled.value = false;
+    showProgress.value = true;
+    String args = '';
+    if (startmenu.value) args += ' startmenu';
+    if (desktopicon.value) args += ' desktopicon';
+    if (printer.value) args += ' printer';
+    try {
+      await bind.installInstallMe(options: args, path: controller.text);
+    } catch (error) {
+      if (!mounted) return;
+      showProgress.value = false;
+      btnEnabled.value = true;
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(translate('Installation failed!')),
+          content: SelectableText(error.toString()),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(translate('OK')),
+            ),
+          ],
+        ),
+      );
+    } finally {
+      if (mounted) {
+        showProgress.value = false;
+        btnEnabled.value = true;
+      }
     }
-
-    do_install();
   }
 
   void selectInstallPath() async {

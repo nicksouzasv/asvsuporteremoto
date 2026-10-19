@@ -64,3 +64,9 @@ Ainda é necessário homologar manualmente: uma sessão autenticada entre dois P
 ## Atualizações futuras
 
 Consulte `asv/UPDATE.md` e `asv/changes.patch`. O código do protocolo, captura, autenticação e implementação de serviço não foi substituído. Os workflows continuam usando alguns downloads externos mutáveis do upstream (engine Flutter e drivers); o commit do RustDesk está fixado, mas isso não torna toda a cadeia de dependências reproduzível byte a byte. Revise e fixe hashes desses downloads antes de exigir builds herméticos.
+
+## Correção do botão de instalação
+
+A instalação interativa Flutter passa a aguardar o resultado nativo. Se o serviço RustDesk original estiver ativo, se a permissão de administrador for cancelada ou se houver outro erro, o motivo aparece em uma caixa de diálogo e o botão é liberado para nova tentativa. A janela só encerra após sucesso. O serviço original não é parado automaticamente. A instalação silenciosa continua usando o caminho original.
+
+`asv/validate-install-button.ps1` exercita o botão real por UI Automation em Windows descartável, com um instalador oficial RustDesk 1.5.0 de hash fixado como cenário de conflito. Confere a mensagem visível, a preservação do serviço anterior e a nova tentativa pelo mesmo botão após parar explicitamente o serviço de teste. O workflow de validação independente aceita a opção `interactive` para repetir esse teste sobre um EXE existente.

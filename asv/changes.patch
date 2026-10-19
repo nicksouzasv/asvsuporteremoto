@@ -31,6 +31,26 @@
      }
      #[cfg(target_os = "android")]
      {
+@@ -2419,8 +2419,17 @@
+     run_without_install();
+ }
+ 
+-pub fn install_install_me(options: String, path: String) {
+-    install_me(options, path, false, false);
++pub fn install_install_me(options: String, path: String) -> ResultType<()> {
++    #[cfg(windows)]
++    {
++        crate::platform::windows::install_me(&options, path, false, false)?;
++        std::process::exit(0);
++    }
++    #[cfg(not(windows))]
++    {
++        install_me(options, path, false, false);
++        Ok(())
++    }
+ }
+ 
+ pub fn install_install_path() -> SyncReturn<String> {
 --- a/src/flutter.rs
 +++ b/src/flutter.rs
 @@ -206,7 +206,7 @@
@@ -172,6 +192,59 @@
              VALUE "ProductVersion", VERSION_AS_STRING "\0"
          END
      END
+--- a/flutter/lib/desktop/pages/install_page.dart
++++ b/flutter/lib/desktop/pages/install_page.dart
+@@ -250,18 +250,39 @@
+         ));
+   }
+ 
+-  void install() {
+-    do_install() {
+-      btnEnabled.value = false;
+-      showProgress.value = true;
+-      String args = '';
+-      if (startmenu.value) args += ' startmenu';
+-      if (desktopicon.value) args += ' desktopicon';
+-      if (printer.value) args += ' printer';
+-      bind.installInstallMe(options: args, path: controller.text);
++  Future<void> install() async {
++    if (!btnEnabled.value) return;
++    btnEnabled.value = false;
++    showProgress.value = true;
++    String args = '';
++    if (startmenu.value) args += ' startmenu';
++    if (desktopicon.value) args += ' desktopicon';
++    if (printer.value) args += ' printer';
++    try {
++      await bind.installInstallMe(options: args, path: controller.text);
++    } catch (error) {
++      if (!mounted) return;
++      showProgress.value = false;
++      btnEnabled.value = true;
++      await showDialog<void>(
++        context: context,
++        builder: (dialogContext) => AlertDialog(
++          title: Text(translate('Installation failed!')),
++          content: SelectableText(error.toString()),
++          actions: [
++            TextButton(
++              onPressed: () => Navigator.of(dialogContext).pop(),
++              child: Text(translate('OK')),
++            ),
++          ],
++        ),
++      );
++    } finally {
++      if (mounted) {
++        showProgress.value = false;
++        btnEnabled.value = true;
++      }
+     }
+-
+-    do_install();
+   }
+ 
+   void selectInstallPath() async {
 --- a/flutter/lib/desktop/pages/desktop_setting_page.dart
 +++ b/flutter/lib/desktop/pages/desktop_setting_page.dart
 @@ -2532,7 +2532,7 @@

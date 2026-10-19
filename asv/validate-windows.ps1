@@ -1,4 +1,4 @@
-param([Parameter(Mandatory)][string]$Installer)
+param([Parameter(Mandatory)][string]$Installer, [switch]$SkipInstall)
 $ErrorActionPreference = 'Stop'
 $report = [ordered]@{
     time = (Get-Date).ToUniversalTime().ToString('o')
@@ -47,7 +47,9 @@ try {
     $principal = [Security.Principal.WindowsPrincipal]::new($identity)
     Assert-ASV ($principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) 'administrator'
     # Run only in a disposable Windows runner/VM. Installation creates a real remote service.
-    $setup = Start-Process (Resolve-Path $Installer) -ArgumentList '--silent-install' -PassThru
+    if (-not $SkipInstall) {
+        $setup = Start-Process (Resolve-Path $Installer) -ArgumentList '--silent-install' -PassThru
+    }
     Assert-ASV (Wait-ASV { (Test-Path $installedExe) -and
         ((Get-Service $serviceName -ErrorAction SilentlyContinue).Status -eq 'Running') } 120) 'installation-and-service'
     $svc = Get-CimInstance Win32_Service -Filter "Name='$serviceName'"

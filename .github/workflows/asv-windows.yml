@@ -196,6 +196,7 @@ jobs:
       - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
         with:
           prefix-key: ${{ matrix.job.os }}
+          cache-on-failure: true
 
       - name: Setup vcpkg with Github Actions binary cache
         uses: lukka/run-vcpkg@b1a0dd252f06b9e25b3c022a9a03bd7a427fb6a2 # v11
@@ -317,8 +318,12 @@ jobs:
           cd ../..
           cp target/release/rustdesk-portable-packer.exe distribution/ASV-Suporte-Remoto-Setup.exe
 
+      - name: Validate interactive installation and visible conflict error
+        shell: powershell
+        run: ./asv/validate-install-button.ps1 -Installer ./distribution/ASV-Suporte-Remoto-Setup.exe
+
       - name: Validate installation, settings and service on Windows
-        run: ./asv/validate-windows.ps1 -Installer ./distribution/ASV-Suporte-Remoto-Setup.exe
+        run: ./asv/validate-windows.ps1 -Installer ./distribution/ASV-Suporte-Remoto-Setup.exe -SkipInstall
 
       - name: Hash deliverables
         if: success()

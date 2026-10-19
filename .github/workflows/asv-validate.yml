@@ -7,6 +7,11 @@ on:
         required: true
         default: '39306201149'
         type: string
+      interactive:
+        description: 'Test Accept and Install, the legacy-service error, and retry'
+        required: false
+        default: false
+        type: boolean
 permissions:
   contents: read
   actions: read
@@ -36,8 +41,17 @@ jobs:
               'note': 'Installer and embedded source are unchanged; validation script runs from this commit.'
           }
           Path('distribution/build-provenance.json').write_text(json.dumps(result, indent=2))
+      - name: Validate interactive button and conflict recovery
+        if: inputs.interactive
+        shell: powershell
+        run: ./asv/validate-install-button.ps1 -Installer ./distribution/ASV-Suporte-Remoto-Setup.exe
       - name: Validate unchanged installer on clean Windows
-        run: ./asv/validate-windows.ps1 -Installer ./distribution/ASV-Suporte-Remoto-Setup.exe
+        run: |
+          if ('${{ inputs.interactive }}' -eq 'true') {
+            ./asv/validate-windows.ps1 -Installer ./distribution/ASV-Suporte-Remoto-Setup.exe -SkipInstall
+          } else {
+            ./asv/validate-windows.ps1 -Installer ./distribution/ASV-Suporte-Remoto-Setup.exe
+          }
       - name: Hash verified deliverables
         if: success()
         shell: pwsh
