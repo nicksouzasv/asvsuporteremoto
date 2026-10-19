@@ -1,6 +1,26 @@
 ﻿param([Parameter(Mandatory)][string]$Installer)
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes, System.Drawing
+# Flutter 3.24 exposes semantics after an MSAA client requests OBJID_CLIENT.
+Add-Type @'
+using System;
+using System.Runtime.InteropServices;
+public static class InstallerAccessibility {
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    static extern IntPtr FindWindowEx(IntPtr parent, IntPtr after, string cls, string title);
+    [DllImport("oleacc.dll")]
+    static extern int AccessibleObjectFromWindow(IntPtr hwnd, uint id, ref Guid iid,
+        [MarshalAs(UnmanagedType.Interface)] out object accessible);
+    public static void Enable(IntPtr parent) {
+        var child = FindWindowEx(parent, IntPtr.Zero, "FLUTTERVIEW", null);
+        if (child == IntPtr.Zero) return;
+        var iid = new Guid("618736e0-3c3d-11cf-810c-00aa00389b71");
+        object accessible;
+        AccessibleObjectFromWindow(child, 0xfffffffc, ref iid, out accessible);
+        if (accessible != null && Marshal.IsComObject(accessible)) Marshal.ReleaseComObject(accessible);
+    }
+}
+'@
 $report = [ordered]@{ checks = [ordered]@{} }
 $buttonCondition = [Windows.Automation.PropertyCondition]::new(
     [Windows.Automation.AutomationElement]::ControlTypeProperty,
@@ -19,7 +39,10 @@ function Wait-InstallUI([scriptblock]$Condition, [int]$Seconds = 60) {
 function Get-InstallWindow {
     $p = Get-Process -Name ASV-Suporte-Remoto -ErrorAction SilentlyContinue |
         Where-Object MainWindowHandle -ne 0 | Select-Object -First 1
-    if ($p) { return [Windows.Automation.AutomationElement]::FromHandle($p.MainWindowHandle) }
+    if ($p) {
+        [InstallerAccessibility]::Enable($p.MainWindowHandle)
+        return [Windows.Automation.AutomationElement]::FromHandle($p.MainWindowHandle)
+    }
 }
 
 function Find-InstallButton([string]$Name) {
