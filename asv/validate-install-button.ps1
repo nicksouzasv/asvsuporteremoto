@@ -1,31 +1,40 @@
 ﻿param([Parameter(Mandatory)][string]$Installer)
 $ErrorActionPreference = 'Stop'
-Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes, System.Drawing
-# Flutter 3.24 exposes semantics after an MSAA client requests OBJID_CLIENT.
-Add-Type @'
+Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes, System.Drawing, Accessibility
+# This Flutter engine exposes controls through MSAA; UIA only sees FLUTTERVIEW.
+Add-Type -ReferencedAssemblies ([Accessibility.IAccessible].Assembly.Location) @'
 using System;
 using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
+using Accessibility;
 public static class InstallerAccessibility {
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     static extern IntPtr FindWindowEx(IntPtr parent, IntPtr after, string cls, string title);
     [DllImport("oleacc.dll")]
     static extern int AccessibleObjectFromWindow(IntPtr hwnd, uint id, ref Guid iid,
         [MarshalAs(UnmanagedType.Interface)] out object accessible);
-    public static int Enable(IntPtr parent) {
+    public static IAccessible Find(IntPtr parent, string name, bool button) {
         var child = FindWindowEx(parent, IntPtr.Zero, "FLUTTERVIEW", null);
-        if (child == IntPtr.Zero) return -1;
+        if (child == IntPtr.Zero) return null;
         var iid = new Guid("618736e0-3c3d-11cf-810c-00aa00389b71");
         object accessible;
-        int result = AccessibleObjectFromWindow(child, 0xfffffffc, ref iid, out accessible);
-        if (accessible != null && Marshal.IsComObject(accessible)) Marshal.ReleaseComObject(accessible);
-        return result;
+        AccessibleObjectFromWindow(child, 0xfffffffc, ref iid, out accessible);
+        return FindNode(accessible as IAccessible, name, button);
+    }
+    static IAccessible FindNode(IAccessible node, string name, bool button) {
+        if (node == null) return null;
+        if (Regex.IsMatch(node.get_accName(0) ?? "", name, RegexOptions.IgnoreCase) &&
+            (!button || (Convert.ToInt32(node.get_accRole(0)) == 43 &&
+                         (Convert.ToInt32(node.get_accState(0)) & 1) == 0))) return node;
+        for (int i = 1; i <= node.accChildCount; i++) {
+            var found = FindNode(node.get_accChild(i) as IAccessible, name, button);
+            if (found != null) return found;
+        }
+        return null;
     }
 }
 '@
 $report = [ordered]@{ checks = [ordered]@{} }
-$buttonCondition = [Windows.Automation.PropertyCondition]::new(
-    [Windows.Automation.AutomationElement]::ControlTypeProperty,
-    [Windows.Automation.ControlType]::Button)
 
 function Wait-InstallUI([scriptblock]$Condition, [int]$Seconds = 60) {
     $deadline = (Get-Date).AddSeconds($Seconds)
@@ -41,22 +50,19 @@ function Get-InstallWindow {
     $p = Get-Process -Name ASV-Suporte-Remoto -ErrorAction SilentlyContinue |
         Where-Object MainWindowHandle -ne 0 | Select-Object -First 1
     if ($p) {
-        $null = [InstallerAccessibility]::Enable($p.MainWindowHandle)
         return [Windows.Automation.AutomationElement]::FromHandle($p.MainWindowHandle)
     }
 }
 
 function Find-InstallButton([string]$Name) {
     $window = Get-InstallWindow
-    if (-not $window) { return }
-    foreach ($element in $window.FindAll([Windows.Automation.TreeScope]::Descendants, $buttonCondition)) {
-        if ($element.Current.Name -match $Name -and $element.Current.IsEnabled) { return $element }
+    if ($window) {
+        return [InstallerAccessibility]::Find([IntPtr]$window.Current.NativeWindowHandle, $Name, $true)
     }
 }
 
 function Invoke-InstallButton($Button) {
-    $pattern = $Button.GetCurrentPattern([Windows.Automation.InvokePattern]::Pattern)
-    $pattern.Invoke()
+    $Button.accDoDefaultAction(0)
 }
 
 function Save-InstallWindow([string]$Name) {
@@ -87,11 +93,8 @@ try {
     $null = Wait-InstallUI {
         $window = Get-InstallWindow
         if (-not $window) { return $false }
-        foreach ($element in $window.FindAll([Windows.Automation.TreeScope]::Descendants,
-                [Windows.Automation.Condition]::TrueCondition)) {
-            if ($element.Current.Name -like '*O serviço RustDesk original está ativo*') { return $true }
-        }
-        return $false
+        return [InstallerAccessibility]::Find([IntPtr]$window.Current.NativeWindowHandle,
+            'O serviço RustDesk original está ativo', $false)
     }
     $report.checks['conflict-error-visible-after-button-click'] = $true
     if ((Get-Service RustDesk).Status -ne 'Running') { throw 'Original service was unexpectedly changed.' }
@@ -114,12 +117,7 @@ try {
         Select-Object ProcessName, MainWindowHandle, MainWindowTitle | Format-Table | Out-Host
     $window = Get-InstallWindow
     if ($window) {
-        Write-Host "MSAA activation result: $([InstallerAccessibility]::Enable([IntPtr]$window.Current.NativeWindowHandle))"
         Save-InstallWindow 'interactive-install-failure.png'
-        foreach ($element in $window.FindAll([Windows.Automation.TreeScope]::Descendants,
-                [Windows.Automation.Condition]::TrueCondition)) {
-            Write-Host "$($element.Current.ControlType.ProgrammaticName): $($element.Current.Name)"
-        }
     }
     throw
 } finally {
