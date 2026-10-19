@@ -2419,7 +2419,7 @@ pub fn install_run_without_install() {
     run_without_install();
 }
 
-pub fn install_install_me(options: String, path: String) -> ResultType<()> {
+pub fn install_install_me(options: String, path: String) -> hbb_common::anyhow::Result<()> {
     #[cfg(windows)]
     {
         crate::platform::windows::install_me(&options, path, false, false)?;
