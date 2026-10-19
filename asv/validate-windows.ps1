@@ -104,12 +104,16 @@ try {
         }
         return $false
     } 90) 'rendezvous-registration-confirmed'
-    $ui = Start-Process $installedExe -PassThru
+    Start-Process $installedExe
     Assert-ASV (Wait-ASV {
-        $ui.Refresh()
-        return (-not $ui.HasExited -and $ui.MainWindowHandle -ne [IntPtr]::Zero)
+        # Interactive installation may already have opened the main window.
+        $ui = Get-Process -Name $serviceName -ErrorAction SilentlyContinue |
+            Where-Object { $_.Path -eq $installedExe -and $_.MainWindowHandle -ne [IntPtr]::Zero } |
+            Select-Object -First 1
+        if ($ui) { $report.windowTitle = $ui.MainWindowTitle; return $true }
+        return $false
     } 45) 'ui-window-started'
-    $report.windowTitle = $ui.MainWindowTitle
+    Assert-ASV ($report.windowTitle -like 'ASV Suporte Remoto*') 'ui-window-brand'
     Add-Type -AssemblyName System.Drawing
     $icon = [Drawing.Icon]::ExtractAssociatedIcon($installedExe)
     $bitmap = $icon.ToBitmap()
