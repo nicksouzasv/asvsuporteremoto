@@ -302,7 +302,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p distribution
-          tar --exclude='./.git' --exclude='./target' --exclude='./flutter/build' --exclude='./flutter/.dart_tool' --exclude='./flutter/ephemeral' --exclude='./rustdesk' --exclude='./distribution' --exclude='./windows-x64-release*' --exclude='./usbmmidd_v2*' --exclude='./rustdesk_printer_driver*' --exclude='./printer_driver_adapter*' -czf distribution/ASV-Suporte-Remoto-source.tar.gz .
+          tar --exclude='./.git' --exclude='./target' --exclude='./flutter/build' --exclude='./flutter/.dart_tool' --exclude='./flutter/ephemeral' --exclude='./flutter/windows/flutter/ephemeral' --exclude='./rustdesk' --exclude='./distribution' --exclude='./windows-x64-release*' --exclude='./usbmmidd_v2*' --exclude='./rustdesk_printer_driver*' --exclude='./printer_driver_adapter*' -czf distribution/ASV-Suporte-Remoto-source.tar.gz .
           cp distribution/ASV-Suporte-Remoto-source.tar.gz rustdesk/
           cp asv/NOTICE.txt distribution/NOTICE-ASV.txt
           cp LICENCE distribution/LICENCE

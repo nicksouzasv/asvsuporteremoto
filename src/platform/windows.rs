@@ -1583,6 +1583,9 @@ fn get_after_install(
 }
 
 pub fn install_me(options: &str, path: String, silent: bool, debug: bool) -> ResultType<()> {
+    if is_service_running("RustDesk") {
+        bail!("O serviço RustDesk original está ativo. Antes de instalar ASV Suporte Remoto, pare esse serviço por uma via administrativa independente para evitar conflito de identificação. A instalação anterior não foi alterada.");
+    }
     // MSI and EXE installations use different registry layouts, so MSI-to-EXE upgrades are not supported.
     let (installed_subkey, _, _, _) = get_install_info();
     if get_windows_installer_state(&installed_subkey)? == Some(true) {

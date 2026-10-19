@@ -7,7 +7,7 @@ Base: `asv/upstream.json`. O submódulo `hbb_common` foi incluído como fonte no
 | Arquivo | Uso / alteração |
 |---|---|
 | `src/common.rs` | Inicialização da identidade interna, mapas de opções impostas e consulta de atualização |
-| `src/platform/windows.rs` | Retorna servidor/chave incorporados no caminho que antes interpretava o nome do arquivo |
+| `src/platform/windows.rs` | Retorna servidor/chave incorporados no caminho que antes interpretava o nome do arquivo; recusa instalação enquanto o serviço oficial está ativo |
 | `src/flutter.rs` | Nome visível exportado ao runner nativo e usado na busca de janela existente |
 | `src/tray.rs` | Nome visível no tooltip da bandeja; ID de instância permanece interno |
 | `src/flutter_ffi.rs` | Reaplica configuração ASV na instância da DLL Flutter, inclusive se houver custom config recebida |
@@ -39,4 +39,4 @@ Os SVGs em `res/logo*.svg` são do caminho legado; substituí-los isoladamente n
 
 ## Superfície de regressão
 
-Mudam identidade e configuração iniciais de todos os processos deste fork, resolução de servidor/chave no Windows, seleção de marca/títulos na interface, metadados e reconhecimento do instalador no empacotador. Esses caminhos precisam mudar para atender à identidade ASV sem configuração manual e sem comandos Windows inseguros com espaços. O serviço continua usando a implementação original, porém com outro nome e perfil de configuração. Captura, entrada, transporte, autenticação, transferência e protocolos não foram reimplementados. O código legado Sciter não é alvo de entrega.
+Mudam identidade e configuração iniciais de todos os processos deste fork, resolução de servidor/chave e verificação do serviço anterior no Windows, seleção de marca/títulos na interface, metadados e reconhecimento do instalador no empacotador. Esses caminhos precisam mudar para atender à identidade ASV sem configuração manual e sem comandos Windows inseguros com espaços. O serviço continua usando a implementação original, porém com outro nome e perfil de configuração. Captura, entrada, transporte, autenticação, transferência e protocolos não foram reimplementados. O código legado Sciter não é alvo de entrega.
