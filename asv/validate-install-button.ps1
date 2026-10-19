@@ -48,7 +48,9 @@ try {
     Start-Process (Resolve-Path $Installer) | Out-Null
     $installLabel = 'Accept and Install|Aceitar e Instalar'
     $button = Wait-InstallUI { Find-InstallButton $installLabel }
+    Write-Host "Invoking Accept and Install with the original service running."
     Invoke-InstallButton $button
+    $report.checks['accept-button-invoked'] = $true
     $null = Wait-InstallUI {
         $window = Get-InstallWindow
         if (-not $window) { return $false }
@@ -79,6 +81,7 @@ try {
 } catch {
     $report.result = 'failed'
     $report.error = $_.Exception.Message
+    Write-Host $_.ScriptStackTrace
     throw
 } finally {
     New-Item distribution -ItemType Directory -Force | Out-Null
