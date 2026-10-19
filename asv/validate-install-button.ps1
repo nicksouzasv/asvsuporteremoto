@@ -58,6 +58,15 @@ function Invoke-InstallButton($Button) {
     $pattern.Invoke()
 }
 
+function Save-InstallWindow([string]$Name) {
+    $bounds = (Get-InstallWindow).Current.BoundingRectangle
+    $bitmap = [Drawing.Bitmap]::new([int]$bounds.Width, [int]$bounds.Height)
+    $graphics = [Drawing.Graphics]::FromImage($bitmap)
+    $graphics.CopyFromScreen([int]$bounds.X, [int]$bounds.Y, 0, 0, $bitmap.Size)
+    $bitmap.Save((Join-Path (Resolve-Path distribution) $Name))
+    $graphics.Dispose(); $bitmap.Dispose()
+}
+
 try {
     # A real upstream installation reproduces the reported conflict, only on this disposable runner.
     $stock = Join-Path $env:TEMP 'rustdesk-1.5.0-x86_64.exe'
@@ -86,12 +95,7 @@ try {
     $report.checks['conflict-error-visible-after-button-click'] = $true
     if ((Get-Service RustDesk).Status -ne 'Running') { throw 'Original service was unexpectedly changed.' }
     $report.checks['original-service-preserved'] = $true
-    $bounds = (Get-InstallWindow).Current.BoundingRectangle
-    $bitmap = [Drawing.Bitmap]::new([int]$bounds.Width, [int]$bounds.Height)
-    $graphics = [Drawing.Graphics]::FromImage($bitmap)
-    $graphics.CopyFromScreen([int]$bounds.X, [int]$bounds.Y, 0, 0, $bitmap.Size)
-    $bitmap.Save((Join-Path (Resolve-Path distribution) 'interactive-install-error.png'))
-    $graphics.Dispose(); $bitmap.Dispose()
+    Save-InstallWindow 'interactive-install-error.png'
     Invoke-InstallButton (Wait-InstallUI { Find-InstallButton '^OK$' })
     $button = Wait-InstallUI { Find-InstallButton $installLabel }
     $report.checks['install-button-enabled-for-retry'] = $true
@@ -109,6 +113,7 @@ try {
         Select-Object ProcessName, MainWindowHandle, MainWindowTitle | Format-Table | Out-Host
     $window = Get-InstallWindow
     if ($window) {
+        Save-InstallWindow 'interactive-install-failure.png'
         foreach ($element in $window.FindAll([Windows.Automation.TreeScope]::Descendants,
                 [Windows.Automation.Condition]::TrueCondition)) {
             Write-Host "$($element.Current.ControlType.ProgrammaticName): $($element.Current.Name)"
